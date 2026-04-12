@@ -1,4 +1,5 @@
 <?php
+error_reporting(E_ALL);
 // ─── Security Headers ─────────────────────────────────────────────────────────
 header("X-Frame-Options: DENY");
 header("X-XSS-Protection: 1; mode=block");
