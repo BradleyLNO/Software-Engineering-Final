@@ -27,7 +27,7 @@ define('DB_NAME', 'schooldb');
 // ─── Application Configuration ────────────────────────────────────────────────
 define('APP_NAME', 'CampusSafe');
 define('APP_VERSION', '1.0.0');
-define('BASE_URL', 'http://localhost/campus_safety'); // Update for production
+define('BASE_URL', 'http://localhost/campus_safety_system'); // Update for production
 
 // Campus locations for the dropdown (map feature placeholder)
 define('CAMPUS_LOCATIONS', [
