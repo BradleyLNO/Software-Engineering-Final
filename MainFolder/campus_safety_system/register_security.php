@@ -62,15 +62,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $uuid         = generateUUID();
             $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-            $dutyStatus   = 'OFF_DUTY'; // Default
+            $dutyStatus   = 'OFF_DUTY';
+            $verifyToken  = generateSecureToken();
+            $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
             $stmt = $conn->prepare(
                 "INSERT INTO security_personnel
-                    (security_id, staff_id, first_name, last_name, email, phone, password_hash, duty_status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                    (security_id, staff_id, first_name, last_name, email, phone,
+                     password_hash, duty_status, email_verified, verification_token,
+                     verification_token_expires_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)"
             );
             $stmt->bind_param(
-                "ssssssss",
+                "ssssssssss",
                 $uuid,
                 $formData['staff_id'],
                 $formData['first_name'],
@@ -78,17 +82,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formData['email'],
                 $formData['phone'],
                 $passwordHash,
-                $dutyStatus
+                $dutyStatus,
+                $verifyToken,
+                $tokenExpires
             );
 
             if ($stmt->execute()) {
-                setFlash('success', 'Security account created! You can now log in.');
+                $stmt->close();
+                require_once 'mailer.php';
+                $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
+
+                if ($emailSent) {
+                    setFlash('info', 'Security account created! Please check your email and verify your address before signing in.');
+                } else {
+                    setFlash('warning', 'Account created, but the verification email could not be sent. Use the "Resend verification email" option on the login page to try again.');
+                }
                 header('Location: login.php?type=security');
                 exit();
             } else {
+                $stmt->close();
                 $errors[] = "Registration failed due to a server error. Please try again.";
             }
-            $stmt->close();
         }
     }
 }

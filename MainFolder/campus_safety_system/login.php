@@ -7,7 +7,10 @@ if (isLoggedIn()) {
     exit();
 }
 
-$error = '';
+$error          = '';
+$emailUnverified = false;
+$unverifiedEmail = '';
+$unverifiedType  = 'university';
 $userType = $_POST['user_type'] ?? ($_GET['type'] ?? 'university');
 $userType = in_array($userType, ['university', 'security']) ? $userType : 'university';
 
@@ -35,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($userType === 'university') {
                 // Query university_users — match by email OR university_id
                 $stmt = $conn->prepare(
-                    "SELECT user_id, first_name, last_name, email, university_id, role, password_hash
+                    "SELECT user_id, first_name, last_name, email, university_id, role,
+                            password_hash, email_verified
                      FROM university_users
                      WHERE email = ? OR university_id = ?
                      LIMIT 1"
@@ -47,19 +51,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result->num_rows === 1) {
                     $user = $result->fetch_assoc();
                     if (password_verify($password, $user['password_hash'])) {
-                        // Regenerate session ID to prevent fixation
-                        session_regenerate_id(true);
-                        $_SESSION['user_id']        = $user['user_id'];
-                        $_SESSION['user_type']      = 'university';
-                        $_SESSION['first_name']     = $user['first_name'];
-                        $_SESSION['last_name']      = $user['last_name'];
-                        $_SESSION['email']          = $user['email'];
-                        $_SESSION['university_id']  = $user['university_id'];
-                        $_SESSION['role']           = $user['role'];
-                        // Reset rate limit on success
-                        unset($_SESSION["rate_limit_{$rateLimitKey}"]);
-                        header('Location: dashboard_user.php');
-                        exit();
+                        if (!(int)$user['email_verified']) {
+                            $emailUnverified = true;
+                            $unverifiedEmail = $user['email'];
+                            $unverifiedType  = 'university';
+                        } else {
+                            session_regenerate_id(true);
+                            $_SESSION['user_id']        = $user['user_id'];
+                            $_SESSION['user_type']      = 'university';
+                            $_SESSION['first_name']     = $user['first_name'];
+                            $_SESSION['last_name']      = $user['last_name'];
+                            $_SESSION['email']          = $user['email'];
+                            $_SESSION['university_id']  = $user['university_id'];
+                            $_SESSION['role']           = $user['role'];
+                            unset($_SESSION["rate_limit_{$rateLimitKey}"]);
+                            header('Location: dashboard_user.php');
+                            exit();
+                        }
                     } else {
                         $error = 'Invalid credentials. Please try again.';
                     }
@@ -73,7 +81,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 // Security personnel — match by email OR staff_id
                 $stmt = $conn->prepare(
-                    "SELECT security_id, first_name, last_name, email, staff_id, duty_status, password_hash
+                    "SELECT security_id, first_name, last_name, email, staff_id,
+                            duty_status, password_hash, email_verified
                      FROM security_personnel
                      WHERE email = ? OR staff_id = ?
                      LIMIT 1"
@@ -87,17 +96,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($user['duty_status'] === 'INACTIVE') {
                         $error = 'Your account has been deactivated. Contact administration.';
                     } elseif (password_verify($password, $user['password_hash'])) {
-                        session_regenerate_id(true);
-                        $_SESSION['user_id']    = $user['security_id'];
-                        $_SESSION['user_type']  = 'security';
-                        $_SESSION['first_name'] = $user['first_name'];
-                        $_SESSION['last_name']  = $user['last_name'];
-                        $_SESSION['email']      = $user['email'];
-                        $_SESSION['staff_id']   = $user['staff_id'];
-                        $_SESSION['duty_status']= $user['duty_status'];
-                        unset($_SESSION["rate_limit_{$rateLimitKey}"]);
-                        header('Location: dashboard_security.php');
-                        exit();
+                        if (!(int)$user['email_verified']) {
+                            $emailUnverified = true;
+                            $unverifiedEmail = $user['email'];
+                            $unverifiedType  = 'security';
+                        } else {
+                            session_regenerate_id(true);
+                            $_SESSION['user_id']    = $user['security_id'];
+                            $_SESSION['user_type']  = 'security';
+                            $_SESSION['first_name'] = $user['first_name'];
+                            $_SESSION['last_name']  = $user['last_name'];
+                            $_SESSION['email']      = $user['email'];
+                            $_SESSION['staff_id']   = $user['staff_id'];
+                            $_SESSION['duty_status']= $user['duty_status'];
+                            unset($_SESSION["rate_limit_{$rateLimitKey}"]);
+                            header('Location: dashboard_security.php');
+                            exit();
+                        }
                     } else {
                         $error = 'Invalid credentials. Please try again.';
                     }
@@ -165,6 +180,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </div>
 
+            <?php if ($emailUnverified): ?>
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fa fa-envelope me-2"></i>
+                    <strong>Email not verified.</strong>
+                    Please check your inbox and click the verification link before signing in.<br>
+                    <a href="resend_verification.php?email=<?= rawurlencode($unverifiedEmail) ?>&type=<?= $unverifiedType ?>"
+                       class="alert-link fw-semibold">
+                        Resend verification email &rarr;
+                    </a>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php endif; ?>
+
             <?php if ($error): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="fa fa-circle-xmark me-2"></i><?= htmlspecialchars($error) ?>
@@ -196,8 +224,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="invalid-feedback" id="identifierError"></div>
                 </div>
 
-                <div class="mb-4">
-                    <label for="password" class="form-label fw-semibold">Password</label>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="password" class="form-label fw-semibold mb-0">Password</label>
+                        <a href="forgot_password.php" class="text-danger small">
+                            <i class="fa fa-key me-1"></i>Forgot Password?
+                        </a>
+                    </div>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa fa-lock"></i></span>
                         <input type="password" class="form-control" id="password" name="password"
@@ -208,6 +241,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </button>
                     </div>
                 </div>
+
+                <div class="mb-4"></div>
 
                 <button type="submit" class="btn btn-danger btn-auth w-100 fw-bold">
                     <i class="fa fa-right-to-bracket me-2"></i>Sign In
