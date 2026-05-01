@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
 
                 if ($emailSent) {
-                    setFlash('success', 'Security account created! A verification link has been sent to <strong>' . htmlspecialchars($formData['email']) . '</strong>. Click it to activate your account.');
+                    header('Location: register_success.php?email=' . rawurlencode($formData['email']));
                 } else {
                     // Email delivery failed — auto-activate so the user is never locked out
                     $fix = $conn->prepare("UPDATE security_personnel SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL WHERE security_id = ?");
@@ -101,8 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $fix->execute();
                     $fix->close();
                     setFlash('success', 'Security account created! You can now sign in.');
+                    header('Location: login.php?type=security');
                 }
-                header('Location: login.php?type=security');
                 exit();
             } else {
                 $stmt->close();
