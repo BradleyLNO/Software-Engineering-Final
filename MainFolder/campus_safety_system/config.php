@@ -36,7 +36,7 @@ define('BASE_URL', 'http://localhost/Software-Engineering-Final/MainFolder/campu
 define('SMTP_HOST',      'smtp.gmail.com');
 define('SMTP_PORT',      587);
 define('SMTP_USER',      'security.campus5689@gmail.com');   // ← replace with your address
-define('SMTP_PASS',      'ncxyhtnpauiiuphm');       // ← replace with your app password
+define('SMTP_PASS',      'accwfumlaefoohvy');       // ← replace with your app password
 define('SMTP_FROM_NAME', APP_NAME . ' System');
 
 // Campus locations for the dropdown (map feature placeholder)
