@@ -27,7 +27,7 @@ define('DB_NAME', 'schooldb');
 // ─── Application Configuration ────────────────────────────────────────────────
 define('APP_NAME', 'CampusSafe');
 define('APP_VERSION', '1.0.0');
-define('BASE_URL', 'http://localhost/Software-Engineering-Final/MainFolder/campus_safety_system/dashboard_user.php'); // Update for production
+define('BASE_URL', 'http://localhost/Software-Engineering-Final/MainFolder/campus_safety_system'); // Update for production
 
 // ─── SMTP / Email Configuration ────────────────────────────────────────────────
 // Fill in your credentials here before using email features.
@@ -38,8 +38,6 @@ define('SMTP_PORT',      587);
 define('SMTP_USER',      'security.campus5689@gmail.com');   // ← replace with your address
 define('SMTP_PASS',      'ncxyhtnpauiiuphm');       // ← replace with your app password
 define('SMTP_FROM_NAME', APP_NAME . ' System');
-
-// define('BASE_URL', 'http://localhost/campus_safety_system'); // Update for production
 
 // Campus locations for the dropdown (map feature placeholder)
 define('CAMPUS_LOCATIONS', [
