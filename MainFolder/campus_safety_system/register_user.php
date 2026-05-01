@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
 
                 if ($emailSent) {
-                    setFlash('success', 'Account created! A verification link has been sent to <strong>' . htmlspecialchars($formData['email']) . '</strong>. Click it to activate your account.');
+                    header('Location: register_success.php?email=' . rawurlencode($formData['email']));
                 } else {
                     // Email delivery failed — auto-activate so the user is never locked out
                     $fix = $conn->prepare("UPDATE university_users SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL WHERE user_id = ?");
@@ -131,8 +131,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $fix->execute();
                     $fix->close();
                     setFlash('success', 'Account created! You can now sign in.');
+                    header('Location: login.php?type=university');
                 }
-                header('Location: login.php?type=university');
                 exit();
             } else {
                 $stmt->close();
