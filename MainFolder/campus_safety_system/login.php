@@ -7,10 +7,7 @@ if (isLoggedIn()) {
     exit();
 }
 
-$error          = '';
-$emailUnverified = false;
-$unverifiedEmail = '';
-$unverifiedType  = 'university';
+$error    = '';
 $userType = $_POST['user_type'] ?? ($_GET['type'] ?? 'university');
 $userType = in_array($userType, ['university', 'security']) ? $userType : 'university';
 
@@ -51,23 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result->num_rows === 1) {
                     $user = $result->fetch_assoc();
                     if (password_verify($password, $user['password_hash'])) {
-                        if (!(int)$user['email_verified']) {
-                            $emailUnverified = true;
-                            $unverifiedEmail = $user['email'];
-                            $unverifiedType  = 'university';
-                        } else {
-                            session_regenerate_id(true);
-                            $_SESSION['user_id']        = $user['user_id'];
-                            $_SESSION['user_type']      = 'university';
-                            $_SESSION['first_name']     = $user['first_name'];
-                            $_SESSION['last_name']      = $user['last_name'];
-                            $_SESSION['email']          = $user['email'];
-                            $_SESSION['university_id']  = $user['university_id'];
-                            $_SESSION['role']           = $user['role'];
-                            unset($_SESSION["rate_limit_{$rateLimitKey}"]);
-                            header('Location: dashboard_user.php');
-                            exit();
-                        }
+                        session_regenerate_id(true);
+                        $_SESSION['user_id']        = $user['user_id'];
+                        $_SESSION['user_type']      = 'university';
+                        $_SESSION['first_name']     = $user['first_name'];
+                        $_SESSION['last_name']      = $user['last_name'];
+                        $_SESSION['email']          = $user['email'];
+                        $_SESSION['university_id']  = $user['university_id'];
+                        $_SESSION['role']           = $user['role'];
+                        unset($_SESSION["rate_limit_{$rateLimitKey}"]);
+                        header('Location: dashboard_user.php');
+                        exit();
                     } else {
                         $error = 'Invalid credentials. Please try again.';
                     }
@@ -96,23 +87,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($user['duty_status'] === 'INACTIVE') {
                         $error = 'Your account has been deactivated. Contact administration.';
                     } elseif (password_verify($password, $user['password_hash'])) {
-                        if (!(int)$user['email_verified']) {
-                            $emailUnverified = true;
-                            $unverifiedEmail = $user['email'];
-                            $unverifiedType  = 'security';
-                        } else {
-                            session_regenerate_id(true);
-                            $_SESSION['user_id']    = $user['security_id'];
-                            $_SESSION['user_type']  = 'security';
-                            $_SESSION['first_name'] = $user['first_name'];
-                            $_SESSION['last_name']  = $user['last_name'];
-                            $_SESSION['email']      = $user['email'];
-                            $_SESSION['staff_id']   = $user['staff_id'];
-                            $_SESSION['duty_status']= $user['duty_status'];
-                            unset($_SESSION["rate_limit_{$rateLimitKey}"]);
-                            header('Location: dashboard_security.php');
-                            exit();
-                        }
+                        session_regenerate_id(true);
+                        $_SESSION['user_id']    = $user['security_id'];
+                        $_SESSION['user_type']  = 'security';
+                        $_SESSION['first_name'] = $user['first_name'];
+                        $_SESSION['last_name']  = $user['last_name'];
+                        $_SESSION['email']      = $user['email'];
+                        $_SESSION['staff_id']   = $user['staff_id'];
+                        $_SESSION['duty_status']= $user['duty_status'];
+                        unset($_SESSION["rate_limit_{$rateLimitKey}"]);
+                        header('Location: dashboard_security.php');
+                        exit();
                     } else {
                         $error = 'Invalid credentials. Please try again.';
                     }
@@ -179,19 +164,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fa fa-shield me-1"></i> Security Personnel
                 </button>
             </div>
-
-            <?php if ($emailUnverified): ?>
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <i class="fa fa-envelope me-2"></i>
-                    <strong>Email not verified.</strong>
-                    Please check your inbox and click the verification link before signing in.<br>
-                    <a href="resend_verification.php?email=<?= rawurlencode($unverifiedEmail) ?>&type=<?= $unverifiedType ?>"
-                       class="alert-link fw-semibold">
-                        Resend verification email &rarr;
-                    </a>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            <?php endif; ?>
 
             <?php if ($error): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
