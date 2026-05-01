@@ -63,15 +63,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $uuid         = generateUUID();
             $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
             $dutyStatus   = 'OFF_DUTY';
+            $verifyToken  = generateSecureToken();
+            $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
             $stmt = $conn->prepare(
                 "INSERT INTO security_personnel
                     (security_id, staff_id, first_name, last_name, email, phone,
-                     password_hash, duty_status, email_verified)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                     password_hash, duty_status, email_verified, verification_token,
+                     verification_token_expires_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)"
             );
             $stmt->bind_param(
-                "ssssssss",
+                "ssssssssss",
                 $uuid,
                 $formData['staff_id'],
                 $formData['first_name'],
@@ -79,12 +82,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formData['email'],
                 $formData['phone'],
                 $passwordHash,
-                $dutyStatus
+                $dutyStatus,
+                $verifyToken,
+                $tokenExpires
             );
 
             if ($stmt->execute()) {
                 $stmt->close();
-                setFlash('success', 'Security account created! You can now sign in.');
+                require_once 'mailer.php';
+                $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
+
+                if ($emailSent) {
+                    setFlash('success', 'Security account created! A verification link has been sent to <strong>' . htmlspecialchars($formData['email']) . '</strong>. Click it to activate your account.');
+                } else {
+                    // Email delivery failed — auto-activate so the user is never locked out
+                    $fix = $conn->prepare("UPDATE security_personnel SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL WHERE security_id = ?");
+                    $fix->bind_param("s", $uuid);
+                    $fix->execute();
+                    $fix->close();
+                    setFlash('success', 'Security account created! You can now sign in.');
+                }
                 header('Location: login.php?type=security');
                 exit();
             } else {

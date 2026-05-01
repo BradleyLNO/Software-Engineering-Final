@@ -93,15 +93,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $uuid         = generateUUID();
             $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+            $verifyToken  = generateSecureToken();
+            $tokenExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
             $stmt = $conn->prepare(
                 "INSERT INTO university_users
                     (user_id, university_id, first_name, last_name, email, phone,
-                     password_hash, role, email_verified)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)"
+                     password_hash, role, email_verified, verification_token,
+                     verification_token_expires_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)"
             );
             $stmt->bind_param(
-                "ssssssss",
+                "ssssssssss",
                 $uuid,
                 $formData['university_id'],
                 $formData['first_name'],
@@ -109,12 +112,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $formData['email'],
                 $formData['phone'],
                 $passwordHash,
-                $formData['role']
+                $formData['role'],
+                $verifyToken,
+                $tokenExpires
             );
 
             if ($stmt->execute()) {
                 $stmt->close();
-                setFlash('success', 'Account created! You can now sign in.');
+                require_once 'mailer.php';
+                $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
+
+                if ($emailSent) {
+                    setFlash('success', 'Account created! A verification link has been sent to <strong>' . htmlspecialchars($formData['email']) . '</strong>. Click it to activate your account.');
+                } else {
+                    // Email delivery failed — auto-activate so the user is never locked out
+                    $fix = $conn->prepare("UPDATE university_users SET email_verified = 1, verification_token = NULL, verification_token_expires_at = NULL WHERE user_id = ?");
+                    $fix->bind_param("s", $uuid);
+                    $fix->execute();
+                    $fix->close();
+                    setFlash('success', 'Account created! You can now sign in.');
+                }
                 header('Location: login.php?type=university');
                 exit();
             } else {
