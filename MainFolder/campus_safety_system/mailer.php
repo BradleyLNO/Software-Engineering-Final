@@ -39,6 +39,14 @@ function sendEmail(string $toEmail, string $toName, string $subject, string $htm
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = SMTP_PORT;
         $mail->CharSet    = 'UTF-8';
+        // XAMPP ships with an outdated CA bundle; disable peer verification for localhost.
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true,
+            ],
+        ];
 
         $mail->setFrom(SMTP_USER, SMTP_FROM_NAME);
         $mail->addAddress($toEmail, $toName);
