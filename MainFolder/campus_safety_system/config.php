@@ -38,6 +38,7 @@ define('SMTP_PORT',      587);
 define('SMTP_USER',      'security.campus5689@gmail.com');   // ← replace with your address
 define('SMTP_PASS',      'ncxyhtnpauiiuphm');       // ← replace with your app password
 define('SMTP_FROM_NAME', APP_NAME . ' System');
+define('BASE_URL', 'http://localhost/campus_safety_system'); // Update for production
 
 // Campus locations for the dropdown (map feature placeholder)
 define('CAMPUS_LOCATIONS', [

@@ -14,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $alertId = sanitizeStrict($_POST['alert_id'] ?? '');
 
     // Validate alert_id format
-    if (!preg_match('/^[0-9a-f\-]{36}$/i', $alertId)) {
-        setFlash('danger', 'Invalid alert ID.');
+    if (!preg_match('/^[0-9a-f\-]{36}$/i', $alertId) && $alertId != '') {
+        setFlash('danger', 'Invalid Alert ID');
         header('Location: dashboard_security.php?view=' . $view);
         exit();
     }
