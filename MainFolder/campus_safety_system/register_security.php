@@ -92,6 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require_once 'mailer.php';
                 $emailSent = sendVerificationEmail($formData['email'], $formData['first_name'], $verifyToken);
 
+                // Pass token via session so success page can offer a direct verify link
+                $_SESSION['_pv_token'] = $verifyToken;
+                $_SESSION['_pv_email'] = $formData['email'];
+
                 if ($emailSent) {
                     header('Location: register_success.php?email=' . rawurlencode($formData['email']));
                 } else {
